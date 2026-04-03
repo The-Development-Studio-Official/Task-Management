@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     outDir: 'dist',
+    emptyOutDir: true,
     sourcemap: false,
     minify: 'terser'
   },
