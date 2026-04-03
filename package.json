@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && echo 'Build completed successfully'",
     "preview": "vite preview"
   },
-"dependencies": {
+  "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.96.1",
     "lucide-react": "^1.7.0",
@@ -27,6 +27,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "terser": "^5.46.1",
     "vite": "^8.0.1"
   }
 }
