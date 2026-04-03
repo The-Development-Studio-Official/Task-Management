@@ -59,7 +59,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.id as string);
     if (isNaN(taskId)) {
       res.status(400).json({ error: 'Invalid task ID' });
       return;
@@ -130,7 +130,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.id as string);
     if (isNaN(taskId)) {
       res.status(400).json({ error: 'Invalid task ID' });
       return;
@@ -182,7 +182,7 @@ router.delete('/:id', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
-    const taskId = parseInt(req.params.id);
+    const taskId = parseInt(req.params.id as string);
     if (isNaN(taskId)) {
       res.status(400).json({ error: 'Invalid task ID' });
       return;

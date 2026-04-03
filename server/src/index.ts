@@ -65,7 +65,7 @@ async function initializeDatabase() {
         err?.cause?.code === '42P07') {  // PostgreSQL duplicate object error
       logger.info('Database schema already configured, continuing startup');
     } else {
-      logger.error('Database initialization error:', err);
+      logger.error({err},'Database initialization error:');
       // Still allow the server to start even if migrations fail
       // The database might be in a good state anyway
     }

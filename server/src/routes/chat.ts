@@ -39,7 +39,7 @@ router.get('/messages/:userId', authenticate, async (req: Request, res: Response
 
     const { userId } = req.params;
     const currentUserId = req.user.id;
-    const otherUserId = parseInt(userId);
+    const otherUserId = parseInt(userId as string);
 
     if (isNaN(otherUserId)) {
       res.status(400).json({ error: 'Invalid user ID' });

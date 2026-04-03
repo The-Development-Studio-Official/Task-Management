@@ -36,7 +36,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
       email: users.email,
       role: users.role,
       profilePicture: users.profilePicture,
-    }).from(users).where(eq(users.id, parseInt(id)));
+    }).from(users).where(eq(users.id, parseInt(id as string)));
     
     if (!user) {
       res.status(404).json({ error: 'User not found' });
@@ -113,7 +113,7 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
     const { username, email, role, profilePicture, teamName } = req.body;
 
     // Check if user exists
-    const [existingUser] = await db.select().from(users).where(eq(users.id, parseInt(id)));
+    const [existingUser] = await db.select().from(users).where(eq(users.id, parseInt(id as string)));
     if (!existingUser) {
       res.status(404).json({ error: 'User not found' });
       return;
@@ -154,7 +154,7 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
     if (profilePicture) updateData.profilePicture = profilePicture;
     if (teamName !== undefined) updateData.teamName = teamName;
 
-    const [updatedUser] = await db.update(users).set(updateData).where(eq(users.id, parseInt(id))).returning();
+    const [updatedUser] = await db.update(users).set(updateData).where(eq(users.id, parseInt(id as string))).returning();
 
     res.json({
       id: updatedUser.id,
@@ -176,18 +176,18 @@ router.delete('/:id', authenticate, requireRole('superadmin'), async (req: Reque
     const { id } = req.params;
 
     // Prevent deleting self
-    if (req.user?.id === parseInt(id)) {
+    if (req.user?.id === parseInt(id as string)) {
       res.status(400).json({ error: 'Cannot delete your own account' });
       return;
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, parseInt(id)));
+    const [user] = await db.select().from(users).where(eq(users.id, parseInt(id as string)));
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    await db.delete(users).where(eq(users.id, parseInt(id)));
+    await db.delete(users).where(eq(users.id, parseInt(id as string)));
 
     res.json({ message: 'User deleted successfully', deletedUserId: id });
   } catch (error: any) {

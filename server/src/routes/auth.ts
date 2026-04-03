@@ -10,7 +10,7 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
 // Helper to generate token
-const generateToken = (user: typeof users.$inferSelect) => {
+const generateToken =  (user: { id: number; username: string; role: string }) => {
   return jsonwebtoken.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 };
 
