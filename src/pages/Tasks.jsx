@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Search,
   RefreshCw,
   Plus,
   Clock,
@@ -130,7 +129,7 @@ export default function Tasks() {
     if (!window.confirm('Delete this task?')) return;
     try {
       await apiCall(`/tasks/${id}`, { method: 'DELETE' });
-      setTasks((prev) => prev.filter((t) => t.id !== id));
+      setTasks((prev) => prev.filter((task) => task.id !== id));
     } catch (err) {
       setError(err.message);
     }
@@ -176,14 +175,13 @@ export default function Tasks() {
 
       <div className="surface-card p-4 sm:p-5 mb-5">
         <div className="filter-controls">
-          <div className="search-input relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="search-input">
             <input
               type="text"
               placeholder="Search tasks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="control-input pl-10"
+              className="control-input"
             />
           </div>
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="control-input">
