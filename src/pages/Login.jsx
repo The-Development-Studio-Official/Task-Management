@@ -44,20 +44,42 @@ export default function Login() {
 
     try {
       setIsLoading(true);
-      const res = await fetch('/api/auth/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const loginUrl = `${apiUrl}/api/auth/login`;
+      
+      console.log('Login URL:', loginUrl);
+      
+      const res = await fetch(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
       
-      const data = await res.json();
+      console.log('Response status:', res.status);
+      console.log('Response headers:', res.headers.get('content-type'));
+      
+      const text = await res.text();
+      console.log('Response body:', text);
+      
+      if (!text) {
+        throw new Error('Empty response from server');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+      }
+      
       if (!res.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error || `HTTP ${res.status}: Login failed`);
       }
       
       login(data.token, data.user);
       setLocation('/dashboard');
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message);
     } finally {
       setIsLoading(false);
