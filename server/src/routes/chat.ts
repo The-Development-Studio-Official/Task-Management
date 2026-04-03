@@ -79,9 +79,15 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
     }
 
     const { recipientId, message } = req.body;
+    const parsedRecipientId = Number(recipientId);
 
     if (!recipientId || !message) {
       res.status(400).json({ error: 'recipientId and message are required' });
+      return;
+    }
+
+    if (!Number.isInteger(parsedRecipientId) || parsedRecipientId <= 0) {
+      res.status(400).json({ error: 'recipientId must be a valid user id' });
       return;
     }
 
@@ -92,9 +98,9 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
 
     // Verify recipient exists
     const [recipient] = await db
-      .select()
+      .select({ id: users.id })
       .from(users)
-      .where(eq(users.id, recipientId));
+      .where(eq(users.id, parsedRecipientId));
 
     if (!recipient) {
       res.status(404).json({ error: 'Recipient not found' });
@@ -106,7 +112,7 @@ router.post('/send', authenticate, async (req: Request, res: Response) => {
       .insert(chatMessages)
       .values({
         senderId: req.user.id,
-        channelOrReceiverId: recipientId.toString(),
+        channelOrReceiverId: parsedRecipientId.toString(),
         message: message.trim(),
       })
       .returning();

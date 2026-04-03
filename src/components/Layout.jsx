@@ -11,8 +11,8 @@ export default function Layout({ children }) {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/tasks', label: 'Tasks', icon: CheckSquare },
-    { path: '/org-chart', label: 'Org Chart', icon: Users },
-    { path: '/org-chat', label: 'Org Chat', icon: MessageSquare },
+    { path: '/org-structure', label: 'Org Structure', icon: Users },
+    { path: '/messenger', label: 'Messenger', icon: MessageSquare },
     { path: '/activity', label: 'Activity', icon: Activity },
     ...(user?.role === 'superadmin' ? [{ path: '/users', label: 'User Management', icon: Users }] : []),
   ];

@@ -1,20 +1,16 @@
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
+import { buildPoolConfig } from './poolConfig.js';
 dotenv.config();
 
 async function resetSchema() {
   console.log('Resetting public schema completely...');
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: true,
-    max: 1
-  });
+  const pool = new Pool(buildPoolConfig({ max: 1 }));
   
   try {
-    // This totally wipes everything and gives us a clean slate
     await pool.query('DROP SCHEMA public CASCADE;');
     await pool.query('CREATE SCHEMA public;');
-    await pool.query('GRANT ALL ON SCHEMA public TO task360_pb5h_user;');
+    await pool.query('GRANT ALL ON SCHEMA public TO CURRENT_USER;');
     await pool.query('GRANT ALL ON SCHEMA public TO public;');
     console.log('Wiped out all existing tables perfectly.');
   } catch (err) {

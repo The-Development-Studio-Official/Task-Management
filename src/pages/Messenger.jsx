@@ -3,7 +3,7 @@ import { Send, Loader, AlertCircle, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { apiCall } from '../utils/api.js';
 
-export default function Chat() {
+export default function Messenger() {
   const { user, token } = useAuth();
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -96,7 +96,7 @@ export default function Chat() {
     <div className="page-shell">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <h1 className="section-title">Organization Chat</h1>
+          <h1 className="section-title">Messenger</h1>
           <p className="section-subtitle">Direct messaging with team members.</p>
         </div>
         <button

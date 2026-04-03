@@ -8,6 +8,11 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 const router = express.Router();
 const SALT_ROUNDS = 10;
 
+const parseUserId = (value: string): number | null => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
 // Get all users (accessible to authenticated users)
 router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
@@ -16,6 +21,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       username: users.username,
       email: users.email,
       role: users.role,
+      teamName: users.teamName,
       profilePicture: users.profilePicture,
     }).from(users);
     
@@ -29,14 +35,20 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
 // Get single user by ID
 router.get('/:id', authenticate, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const userId = parseUserId(req.params.id as string);
+    if (!userId) {
+      res.status(400).json({ error: 'Invalid user id' });
+      return;
+    }
+
     const [user] = await db.select({
       id: users.id,
       username: users.username,
       email: users.email,
       role: users.role,
+      teamName: users.teamName,
       profilePicture: users.profilePicture,
-    }).from(users).where(eq(users.id, parseInt(id as string)));
+    }).from(users).where(eq(users.id, userId));
     
     if (!user) {
       res.status(404).json({ error: 'User not found' });
@@ -53,7 +65,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
 // Create new user (ONLY SUPERADMIN)
 router.post('/', authenticate, requireRole('superadmin'), async (req: Request, res: Response) => {
   try {
-    const { username, email, password, role = 'user' } = req.body;
+    const { username, email, password, role = 'user', teamName } = req.body;
 
     // Validation
     if (!username || !email || !password) {
@@ -90,7 +102,7 @@ router.post('/', authenticate, requireRole('superadmin'), async (req: Request, r
       email,
       passwordHash,
       role: role as any,
-      //teamName: teamName || null,  // Column doesn't exist in database yet
+      teamName: typeof teamName === 'string' && teamName.trim() ? teamName.trim() : null,
     }).returning();
 
     res.status(201).json({
@@ -98,6 +110,7 @@ router.post('/', authenticate, requireRole('superadmin'), async (req: Request, r
       username: newUser.username,
       email: newUser.email,
       role: newUser.role,
+      teamName: newUser.teamName,
       message: 'User created successfully'
     });
   } catch (error: any) {
@@ -109,11 +122,26 @@ router.post('/', authenticate, requireRole('superadmin'), async (req: Request, r
 // Update user (ONLY SUPERADMIN can update roles and any user info)
 router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { username, email, role, profilePicture } = req.body;
+    const userId = parseUserId(req.params.id as string);
+    if (!userId) {
+      res.status(400).json({ error: 'Invalid user id' });
+      return;
+    }
+
+    const { username, email, role, profilePicture, teamName } = req.body;
 
     // Check if user exists
-    const [existingUser] = await db.select({ id: users.id, username: users.username, email: users.email, role: users.role, profilePicture: users.profilePicture }).from(users).where(eq(users.id, parseInt(id as string)));
+    const [existingUser] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        teamName: users.teamName,
+        profilePicture: users.profilePicture,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
     if (!existingUser) {
       res.status(404).json({ error: 'User not found' });
       return;
@@ -151,16 +179,17 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (role) updateData.role = role;
-    if (profilePicture) updateData.profilePicture = profilePicture;
-    //if (teamName !== undefined) updateData.teamName = teamName;  // Column doesn't exist in database yet
+    if (profilePicture !== undefined) updateData.profilePicture = profilePicture;
+    if (teamName !== undefined) updateData.teamName = teamName ? teamName.trim() : null;
 
-    const [updatedUser] = await db.update(users).set(updateData).where(eq(users.id, parseInt(id as string))).returning();
+    const [updatedUser] = await db.update(users).set(updateData).where(eq(users.id, userId)).returning();
 
     res.json({
       id: updatedUser.id,
       username: updatedUser.username,
       email: updatedUser.email,
       role: updatedUser.role,
+      teamName: updatedUser.teamName,
       profilePicture: updatedUser.profilePicture,
       message: 'User updated successfully'
     });
@@ -173,23 +202,36 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
 // Delete user (ONLY SUPERADMIN)
 router.delete('/:id', authenticate, requireRole('superadmin'), async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const userId = parseUserId(req.params.id as string);
+    if (!userId) {
+      res.status(400).json({ error: 'Invalid user id' });
+      return;
+    }
 
     // Prevent deleting self
-    if (req.user?.id === parseInt(id as string)) {
+    if (req.user?.id === userId) {
       res.status(400).json({ error: 'Cannot delete your own account' });
       return;
     }
 
-    const [user] = await db.select({ id: users.id, username: users.username, email: users.email, role: users.role, profilePicture: users.profilePicture }).from(users).where(eq(users.id, parseInt(id as string)));
+    const [user] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        profilePicture: users.profilePicture,
+      })
+      .from(users)
+      .where(eq(users.id, userId));
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    await db.delete(users).where(eq(users.id, parseInt(id as string)));
+    await db.delete(users).where(eq(users.id, userId));
 
-    res.json({ message: 'User deleted successfully', deletedUserId: id });
+    res.json({ message: 'User deleted successfully', deletedUserId: userId });
   } catch (error: any) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Failed to delete user', details: error?.message });

@@ -101,11 +101,11 @@ export default function Tasks() {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      const newTask = await apiCall('/tasks', {
+      await apiCall('/tasks', {
         method: 'POST',
         body: JSON.stringify(formData),
       });
-      setTasks((prev) => [newTask, ...prev]);
+      await fetchData({ isRefresh: true });
       closeModal();
     } catch (err) {
       setError(err.message);
@@ -115,11 +115,11 @@ export default function Tasks() {
   const handleUpdateTask = async (e) => {
     e.preventDefault();
     try {
-      const updatedTask = await apiCall(`/tasks/${editingTask.id}`, {
+      await apiCall(`/tasks/${editingTask.id}`, {
         method: 'PUT',
         body: JSON.stringify(formData),
       });
-      setTasks((prev) => prev.map((t) => (t.id === editingTask.id ? updatedTask : t)));
+      await fetchData({ isRefresh: true });
       closeModal();
     } catch (err) {
       setError(err.message);

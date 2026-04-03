@@ -5,9 +5,9 @@ import Layout from './components/Layout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Login from './pages/Login.jsx';
 import ActivityLog from './pages/ActivityLog.jsx';
-import OrgChart from './pages/OrgChart.jsx';
+import OrgStructure from './pages/OrgStructure.jsx';
 import Tasks from './pages/Tasks.jsx';
-import Chat from './pages/Chat.jsx';
+import Messenger from './pages/Messenger.jsx';
 import Users from './pages/Users.jsx';
 import { Loader } from 'lucide-react';
 
@@ -53,9 +53,14 @@ function App() {
           <ProtectedRoute component={ActivityLog} />
         </Layout>
       </Route>
+      <Route path="/org-structure">
+        <Layout>
+          <ProtectedRoute component={OrgStructure} />
+        </Layout>
+      </Route>
       <Route path="/org-chart">
         <Layout>
-          <ProtectedRoute component={OrgChart} />
+          <ProtectedRoute component={OrgStructure} />
         </Layout>
       </Route>
       <Route path="/tasks">
@@ -63,9 +68,14 @@ function App() {
           <ProtectedRoute component={Tasks} />
         </Layout>
       </Route>
+      <Route path="/messenger">
+        <Layout>
+          <ProtectedRoute component={Messenger} />
+        </Layout>
+      </Route>
       <Route path="/org-chat">
         <Layout>
-          <ProtectedRoute component={Chat} />
+          <ProtectedRoute component={Messenger} />
         </Layout>
       </Route>
       <Route path="/users">

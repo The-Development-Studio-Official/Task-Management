@@ -6,6 +6,19 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const parseOptionalUserId = (value: unknown): number | null | 'invalid' => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 'invalid';
+};
+
+const parseOptionalDeadline = (value: unknown): Date | null | 'invalid' => {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? 'invalid' : value;
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? 'invalid' : parsed;
+};
+
 // Get all tasks
 router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
@@ -121,15 +134,27 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
     }
 
     const { name, description, priority, status, assignedToId, deadline } = req.body;
+    const parsedAssignedToId = parseOptionalUserId(assignedToId);
+    const parsedDeadline = parseOptionalDeadline(deadline);
 
     if (!name || !priority || !status) {
       res.status(400).json({ error: 'name, priority, and status are required' });
       return;
     }
 
+    if (parsedAssignedToId === 'invalid') {
+      res.status(400).json({ error: 'assignedToId must be a valid user id' });
+      return;
+    }
+
+    if (parsedDeadline === 'invalid') {
+      res.status(400).json({ error: 'deadline must be a valid date' });
+      return;
+    }
+
     // Verify assignee exists if provided
-    if (assignedToId) {
-      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId));
+    if (parsedAssignedToId) {
+      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, parsedAssignedToId));
       if (!assignee) {
         res.status(404).json({ error: 'Assigned user not found' });
         return;
@@ -143,9 +168,9 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
         description: description || null,
         priority,
         status,
-        assignedToId: assignedToId || null,
+        assignedToId: parsedAssignedToId,
         createdById: req.user.id,
-        deadline: deadline ? new Date(deadline) : null,
+        deadline: parsedDeadline,
       })
       .returning({
         id: tasks.id,
@@ -180,6 +205,18 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
     }
 
     const { name, description, priority, status, assignedToId, deadline } = req.body;
+    const parsedAssignedToId = parseOptionalUserId(assignedToId);
+    const parsedDeadline = parseOptionalDeadline(deadline);
+
+    if (parsedAssignedToId === 'invalid') {
+      res.status(400).json({ error: 'assignedToId must be a valid user id' });
+      return;
+    }
+
+    if (parsedDeadline === 'invalid') {
+      res.status(400).json({ error: 'deadline must be a valid date' });
+      return;
+    }
 
     // Verify task exists
     const [existingTask] = await db.select().from(tasks).where(eq(tasks.id, taskId));
@@ -189,8 +226,8 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
     }
 
     // Verify assignee exists if provided
-    if (assignedToId) {
-      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId));
+    if (parsedAssignedToId) {
+      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, parsedAssignedToId));
       if (!assignee) {
         res.status(404).json({ error: 'Assigned user not found' });
         return;
@@ -204,8 +241,8 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
         description: description !== undefined ? description : existingTask.description,
         priority: priority || existingTask.priority,
         status: status || existingTask.status,
-        assignedToId: assignedToId !== undefined ? assignedToId : existingTask.assignedToId,
-        deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : existingTask.deadline,
+        assignedToId: assignedToId !== undefined ? parsedAssignedToId : existingTask.assignedToId,
+        deadline: deadline !== undefined ? parsedDeadline : existingTask.deadline,
       })
       .where(eq(tasks.id, taskId))
       .returning({

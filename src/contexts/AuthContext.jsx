@@ -32,14 +32,15 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = (newToken, userData) => {
+    localStorage.setItem('token', newToken);
     setToken(newToken);
     setUser(userData);
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
   };
 
   return (

@@ -1,13 +1,12 @@
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
+import { buildPoolConfig } from './poolConfig.js';
 
 dotenv.config();
 
 async function seed() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
+  const pool = new Pool(buildPoolConfig({ max: 1 }));
 
   const username = 'superadmin@123';
   const email = 'superadmin@123';
@@ -16,32 +15,24 @@ async function seed() {
 
   try {
     console.log('Attempting to seed user...');
-    
-    // Use raw SQL with pool directly
+
     await pool.query(`
       INSERT INTO users (username, email, password_hash, role) 
       VALUES ($1, $2, $3, $4) 
       ON CONFLICT (email) DO UPDATE 
-      SET password_hash = $3, role = $4
+      SET username = EXCLUDED.username, password_hash = EXCLUDED.password_hash, role = EXCLUDED.role
     `, [username, email, passwordHash, 'superadmin']);
-    
+
     console.log('Seed completed successfully!');
-    await pool.end();
   } catch (err: any) {
     console.error('Seed error:', err.message);
-    await pool.end();
     throw err;
+  } finally {
+    await pool.end();
   }
-  
-  process.exit(0);
 }
 
 seed().catch(err => {
   console.error('Seed failed:', err);
-  process.exit(1);
-});
-
-seed().catch(err => {
-  console.error(err);
   process.exit(1);
 });
