@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+  "dev": "tsx watch src/index.ts",
+  "build": "tsc",
+  "start": "node dist/index.js",
+  "migrate": "tsx src/db/migrate.ts"
+}
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
