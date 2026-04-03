@@ -94,7 +94,7 @@ router.get('/recent-tasks', authenticate, async (req: Request, res: Response) =>
     const enrichedTasks = await Promise.all(
       recentTasks.map(async (task) => {
         const assignedUser = task.assignedToId
-          ? (await db.select().from(users).where(eq(users.id, task.assignedToId)))[0]
+          ? (await db.select({ id: users.id, username: users.username }).from(users).where(eq(users.id, task.assignedToId)))[0]
           : null;
 
         return {

@@ -17,3 +17,8 @@ export async function runMigrations() {
   await migrationPool.end();
   console.log('Migrations completed successfully.');
 }
+
+runMigrations().catch(err => {
+  console.error('Migration failed:', err);
+  process.exit(1);
+});

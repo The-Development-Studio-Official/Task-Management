@@ -8,6 +8,20 @@
       "when": 1775200564554,
       "tag": "0000_peaceful_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775228500000,
+      "tag": "0001_add_missing_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775300000000,
+      "tag": "0002_add_description_column",
+      "breakpoints": true
     }
   ]
 }

@@ -29,7 +29,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     // Enrich with user data
     const enrichedLogs = await Promise.all(
       logs.map(async (log) => {
-        const [user] = await db.select().from(users).where(eq(users.id, log.userId));
+        const [user] = await db.select({ id: users.id, username: users.username, role: users.role }).from(users).where(eq(users.id, log.userId));
         return {
           ...log,
           user: user ? { id: user.id, username: user.username, role: user.role } : null

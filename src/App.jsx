@@ -9,12 +9,22 @@ import OrgChart from './pages/OrgChart.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Chat from './pages/Chat.jsx';
 import Users from './pages/Users.jsx';
+import { Loader } from 'lucide-react';
 
 const ProtectedRoute = ({ component: Component, ...rest }) => {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (loading) return <div className="h-screen w-screen flex items-center justify-center bg-gray-50">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-500">
+        <div className="text-center">
+          <Loader className="loader-inline mx-auto mb-2" />
+          Loading workspace...
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     setLocation('/login');

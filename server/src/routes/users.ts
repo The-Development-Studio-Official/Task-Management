@@ -53,7 +53,7 @@ router.get('/:id', authenticate, async (req: Request, res: Response) => {
 // Create new user (ONLY SUPERADMIN)
 router.post('/', authenticate, requireRole('superadmin'), async (req: Request, res: Response) => {
   try {
-    const { username, email, password, role = 'user', teamName } = req.body;
+    const { username, email, password, role = 'user' } = req.body;
 
     // Validation
     if (!username || !email || !password) {
@@ -69,13 +69,13 @@ router.post('/', authenticate, requireRole('superadmin'), async (req: Request, r
     }
 
     // Check if user already exists
-    const [existingUser] = await db.select().from(users).where(eq(users.username, username));
+    const [existingUser] = await db.select({ id: users.id }).from(users).where(eq(users.username, username));
     if (existingUser) {
       res.status(409).json({ error: 'Username already exists' });
       return;
     }
 
-    const [existingEmail] = await db.select().from(users).where(eq(users.email, email));
+    const [existingEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
     if (existingEmail) {
       res.status(409).json({ error: 'Email already exists' });
       return;
@@ -90,7 +90,7 @@ router.post('/', authenticate, requireRole('superadmin'), async (req: Request, r
       email,
       passwordHash,
       role: role as any,
-      teamName: teamName || null,
+      //teamName: teamName || null,  // Column doesn't exist in database yet
     }).returning();
 
     res.status(201).json({
@@ -110,10 +110,10 @@ router.post('/', authenticate, requireRole('superadmin'), async (req: Request, r
 router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { username, email, role, profilePicture, teamName } = req.body;
+    const { username, email, role, profilePicture } = req.body;
 
     // Check if user exists
-    const [existingUser] = await db.select().from(users).where(eq(users.id, parseInt(id as string)));
+    const [existingUser] = await db.select({ id: users.id, username: users.username, email: users.email, role: users.role, profilePicture: users.profilePicture }).from(users).where(eq(users.id, parseInt(id as string)));
     if (!existingUser) {
       res.status(404).json({ error: 'User not found' });
       return;
@@ -130,7 +130,7 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
 
     // Check for duplicate username (if trying to change it)
     if (username && username !== existingUser.username) {
-      const [duplicateUser] = await db.select().from(users).where(eq(users.username, username));
+      const [duplicateUser] = await db.select({ id: users.id }).from(users).where(eq(users.username, username));
       if (duplicateUser) {
         res.status(409).json({ error: 'Username already exists' });
         return;
@@ -139,7 +139,7 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
 
     // Check for duplicate email (if trying to change it)
     if (email && email !== existingUser.email) {
-      const [duplicateEmail] = await db.select().from(users).where(eq(users.email, email));
+      const [duplicateEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
       if (duplicateEmail) {
         res.status(409).json({ error: 'Email already exists' });
         return;
@@ -152,7 +152,7 @@ router.put('/:id', authenticate, requireRole('superadmin'), async (req: Request,
     if (email) updateData.email = email;
     if (role) updateData.role = role;
     if (profilePicture) updateData.profilePicture = profilePicture;
-    if (teamName !== undefined) updateData.teamName = teamName;
+    //if (teamName !== undefined) updateData.teamName = teamName;  // Column doesn't exist in database yet
 
     const [updatedUser] = await db.update(users).set(updateData).where(eq(users.id, parseInt(id as string))).returning();
 
@@ -181,7 +181,7 @@ router.delete('/:id', authenticate, requireRole('superadmin'), async (req: Reque
       return;
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, parseInt(id as string)));
+    const [user] = await db.select({ id: users.id, username: users.username, email: users.email, role: users.role, profilePicture: users.profilePicture }).from(users).where(eq(users.id, parseInt(id as string)));
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;

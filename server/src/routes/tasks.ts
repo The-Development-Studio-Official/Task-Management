@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import { db } from '../db/db.js';
 import { tasks, users } from '../db/schema.js';
 import { authenticate } from '../middleware/auth.js';
@@ -14,6 +14,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    // Fetch all tasks
     const allTasks = await db
       .select({
         id: tasks.id,
@@ -28,26 +29,59 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       .from(tasks)
       .orderBy(desc(tasks.id));
 
-    // Enrich with user data
-    const enrichedTasks = await Promise.all(
-      allTasks.map(async (task) => {
-        const assignedUser = task.assignedToId 
-          ? (await db.select().from(users).where(eq(users.id, task.assignedToId)))[0]
-          : null;
-        const createdUser = (await db.select().from(users).where(eq(users.id, task.createdById)))[0];
-        
-        return {
-          ...task,
-          assignedTo: assignedUser ? { id: assignedUser.id, username: assignedUser.username } : null,
-          createdBy: { id: createdUser.id, username: createdUser.username }
-        };
-      })
-    );
+    if (allTasks.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    // Get all unique user IDs (filter out null values)
+    const userIds = new Set([
+      ...allTasks.map(t => t.createdById).filter(id => id !== null && id !== undefined),
+      ...allTasks.map(t => t.assignedToId).filter(id => id !== null && id !== undefined)
+    ]);
+
+    // Batch fetch all users
+    const userMap = new Map();
+    if (userIds.size > 0) {
+      const userIdArray = Array.from(userIds) as number[];
+      const allUsers = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          role: users.role,
+        })
+        .from(users)
+        .where(inArray(users.id, userIdArray));
+
+      allUsers.forEach(user => {
+        userMap.set(user.id, user);
+      });
+    }
+
+    // Map tasks with user data
+    const enrichedTasks = allTasks.map(task => {
+      const createdUser = userMap.get(task.createdById);
+      const assignedUser = task.assignedToId ? userMap.get(task.assignedToId) : null;
+
+      return {
+        ...task,
+        assignedTo: assignedUser ? { id: assignedUser.id, username: assignedUser.username } : null,
+        createdBy: { 
+          id: task.createdById, 
+          username: createdUser?.username || 'Unknown', 
+          role: createdUser?.role
+        }
+      };
+    });
 
     res.json(enrichedTasks);
   } catch (error: any) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ error: 'Failed to fetch tasks', details: error?.message });
+    res.status(500).json({ 
+      error: 'Failed to fetch tasks', 
+      details: error?.message,
+      cause: error?.cause?.message
+    });
   }
 });
 
@@ -95,7 +129,7 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
 
     // Verify assignee exists if provided
     if (assignedToId) {
-      const [assignee] = await db.select().from(users).where(eq(users.id, assignedToId));
+      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId));
       if (!assignee) {
         res.status(404).json({ error: 'Assigned user not found' });
         return;
@@ -113,7 +147,16 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
         createdById: req.user.id,
         deadline: deadline ? new Date(deadline) : null,
       })
-      .returning();
+      .returning({
+        id: tasks.id,
+        name: tasks.name,
+        description: tasks.description,
+        priority: tasks.priority,
+        status: tasks.status,
+        deadline: tasks.deadline,
+        assignedToId: tasks.assignedToId,
+        createdById: tasks.createdById,
+      });
 
     res.status(201).json(newTask);
   } catch (error: any) {
@@ -147,7 +190,7 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
 
     // Verify assignee exists if provided
     if (assignedToId) {
-      const [assignee] = await db.select().from(users).where(eq(users.id, assignedToId));
+      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId));
       if (!assignee) {
         res.status(404).json({ error: 'Assigned user not found' });
         return;
@@ -162,10 +205,19 @@ router.put('/:id', authenticate, async (req: Request, res: Response) => {
         priority: priority || existingTask.priority,
         status: status || existingTask.status,
         assignedToId: assignedToId !== undefined ? assignedToId : existingTask.assignedToId,
-        deadline: deadline ? new Date(deadline) : existingTask.deadline,
+        deadline: deadline !== undefined ? (deadline ? new Date(deadline) : null) : existingTask.deadline,
       })
       .where(eq(tasks.id, taskId))
-      .returning();
+      .returning({
+        id: tasks.id,
+        name: tasks.name,
+        description: tasks.description,
+        priority: tasks.priority,
+        status: tasks.status,
+        deadline: tasks.deadline,
+        assignedToId: tasks.assignedToId,
+        createdById: tasks.createdById,
+      });
 
     res.json(updatedTask);
   } catch (error: any) {

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { Eye, EyeOff } from 'lucide-react';
-import apiCall from '../utils/api.js';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { apiCall } from '../utils/api.js';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -16,40 +16,35 @@ export default function Login() {
 
   const validateForm = () => {
     const errors = {};
-    
     if (!username.trim()) {
       errors.username = 'Username is required';
     } else if (username.trim().length < 3) {
       errors.username = 'Username must be at least 3 characters';
     }
-    
+
     if (!password) {
       errors.password = 'Password is required';
     } else if (password.length < 6) {
       errors.password = 'Password must be at least 6 characters';
     }
-    
+
     return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     const errors = validateForm();
     setValidationErrors(errors);
-    
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
+    if (Object.keys(errors).length > 0) return;
 
     try {
       setIsLoading(true);
       const data = await apiCall('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password }),
       });
-      
       login(data.token, data.user);
       setLocation('/dashboard');
     } catch (err) {
@@ -61,100 +56,83 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-[#f0f4f8] to-[#f8fafc]">
-      {/* Logo Area */}
-      <div className="mb-8">
-        <img 
-          src="/logo.png" 
-          alt="Company Logo" 
-          className="h-16 mx-auto shadow-md"
-        />
-      </div>
-
-      {/* Main Login Card */}
-      <div className="w-full max-w-[440px] bg-white p-10 rounded-lg shadow-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-gray-600">Sign in to your account</p>
-        </div>
-        
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm mb-6 border border-red-200 font-medium">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Username</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={(e) => {
-                setUsername(e.target.value);
-                if (validationErrors.username) {
-                  setValidationErrors({ ...validationErrors, username: '' });
-                }
-              }}
-              placeholder="Enter your username"
-              className={`w-full px-3 py-2.5 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                validationErrors.username 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-              }`}
-            />
-            {validationErrors.username && (
-              <p className="text-xs text-red-600 font-medium">{validationErrors.username}</p>
-            )}
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-700">Password</label>
-            <div className="relative w-full">
-              <input 
-                type={showPassword ? "text" : "password"} 
-                value={password} 
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (validationErrors.password) {
-                    setValidationErrors({ ...validationErrors, password: '' });
-                  }
-                }}
-                placeholder="Enter your password"
-                className={`w-full px-3 py-2.5 pr-10 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
-                  validationErrors.password 
-                    ? 'border-red-500 focus:ring-red-500' 
-                    : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-                }`}
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            {validationErrors.password && (
-              <p className="text-xs text-red-600 font-medium">{validationErrors.password}</p>
-            )}
-          </div>
-          
-          <button 
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2.5 rounded-lg transition-colors mt-2"
-          >
-            {isLoading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-
-        {/* Sign Up Section */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <p className="text-center text-sm text-gray-600">
-            <span className="font-semibold">New user?</span> Contact your Super Admin to create an account
+    <div className="min-h-screen bg-[radial-gradient(circle_at_20%_0%,rgba(37,99,235,0.18),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#f1f5f9_100%)] px-4 py-10">
+      <div className="mx-auto grid max-w-5xl items-center gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="hidden lg:block">
+          <img src="/logo.png" alt="Company logo" className="mb-6 h-14 w-auto" />
+          <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900">
+            Task Manager Workspace
+          </h1>
+          <p className="mt-3 max-w-md text-slate-600">
+            Manage tasks, teams, and communication from one dashboard built for focused operations.
           </p>
-        </div>
+        </section>
+
+        <section className="surface-card mx-auto w-full max-w-md p-6 sm:p-8">
+          <div className="mb-6 text-center">
+            <img src="/logo.png" alt="Company logo" className="mx-auto mb-4 h-14 w-auto lg:hidden" />
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Welcome Back</h2>
+            <p className="section-subtitle">Sign in to continue to your workspace.</p>
+          </div>
+
+          {error && (
+            <div className="alert-error mb-4">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-slate-700">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (validationErrors.username) setValidationErrors({ ...validationErrors, username: '' });
+                }}
+                placeholder="Enter your username"
+                className={`control-input ${validationErrors.username ? '!border-rose-400 !shadow-none' : ''}`}
+              />
+              {validationErrors.username && <p className="mt-1 text-xs font-medium text-rose-600">{validationErrors.username}</p>}
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-semibold text-slate-700">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (validationErrors.password) setValidationErrors({ ...validationErrors, password: '' });
+                  }}
+                  placeholder="Enter your password"
+                  className={`control-input pr-10 ${validationErrors.password ? '!border-rose-400 !shadow-none' : ''}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500"
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+              {validationErrors.password && <p className="mt-1 text-xs font-medium text-rose-600">{validationErrors.password}</p>}
+            </div>
+
+            <button type="submit" className="btn btn-primary w-full" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="mt-6 border-t border-slate-200 pt-4">
+            <p className="text-center text-sm text-slate-600">
+              New user? Contact your super admin to create an account.
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );

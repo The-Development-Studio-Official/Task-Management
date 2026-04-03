@@ -1,151 +1,211 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'wouter';
 import { 
   RefreshCw, CheckCircle2, AlertTriangle, Clock,
-  Users, Briefcase, Target, User, ArrowRight, CheckSquare, Loader
+  Users, Briefcase, Target, User, ArrowRight, CheckSquare, Loader, ClipboardList
 } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import apiCall from '../utils/api.js';
+import { apiCall } from '../utils/api.js';
 
 export default function Dashboard() {
   const { token } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentTasks, setRecentTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
+  const fetchDashboardData = async ({ isRefresh = false } = {}) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        setError(null);
-        
-        const statsData = await apiCall('/dashboard/stats');
-        const tasksData = await apiCall('/dashboard/recent-tasks');
-
-        setStats(statsData);
-        setRecentTasks(Array.isArray(tasksData) ? tasksData : []);
-      } catch (err) {
-        console.error('Error fetching dashboard:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    if (token) fetchData();
+      setError(null);
+
+      const [statsData, tasksData] = await Promise.all([
+        apiCall('/dashboard/stats'),
+        apiCall('/dashboard/recent-tasks'),
+      ]);
+
+      setStats(statsData);
+      setRecentTasks(Array.isArray(tasksData) ? tasksData : []);
+    } catch (err) {
+      console.error('Error fetching dashboard:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      fetchDashboardData();
+    }
   }, [token]);
 
   const chartData = stats ? [
-    { name: 'Overdue', value: stats.overdueTasks, color: '#f43f5e' },
-    { name: 'In Progress', value: stats.inProgressTasks, color: '#0ea5e9' }
+    { name: 'Completed', value: stats.completedTasks, color: '#10b981' },
+    { name: 'In Progress', value: stats.inProgressTasks, color: '#0ea5e9' },
+    { name: 'Pending', value: stats.totalTasks - stats.completedTasks - stats.inProgressTasks, color: '#f59e0b' }
+  ].filter(item => item.value > 0) : [];
+
+  const completionRate = stats?.totalTasks
+    ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
+    : 0;
+
+  const statCards = stats ? [
+    {
+      title: 'Total Tasks',
+      value: stats.totalTasks,
+      meta: 'Across all teams',
+      icon: CheckSquare,
+      iconClass: 'icon-purple',
+      tone: 'primary',
+    },
+    {
+      title: 'Completed',
+      value: stats.completedTasks,
+      meta: `${completionRate}% completion rate`,
+      icon: CheckCircle2,
+      iconClass: 'icon-green',
+      tone: 'success',
+    },
+    {
+      title: 'In Progress',
+      value: stats.inProgressTasks,
+      meta: 'Actively moving',
+      icon: Clock,
+      iconClass: 'icon-blue',
+      tone: 'info',
+    },
+    {
+      title: 'Overdue',
+      value: stats.overdueTasks,
+      meta: 'Needs attention',
+      icon: AlertTriangle,
+      iconClass: 'icon-red',
+      tone: 'danger',
+    },
+    {
+      title: 'Total Users',
+      value: stats.totalUsers,
+      meta: 'On the workspace',
+      icon: Users,
+      iconClass: 'icon-gray',
+      tone: 'neutral',
+    },
+    {
+      title: 'My Tasks',
+      value: stats.myTasks,
+      meta: 'Created by you',
+      icon: Briefcase,
+      iconClass: 'icon-orange',
+      tone: 'warning',
+    },
+    {
+      title: 'Assigned to Me',
+      value: stats.assignedToMe,
+      meta: 'Direct ownership',
+      icon: Target,
+      iconClass: 'icon-pink',
+      tone: 'accent',
+    },
   ] : [];
+
+  const getStatusClass = (status) => {
+    if (status === 'completed') return 'status-completed';
+    if (status === 'in progress') return 'status-progress';
+    return 'status-pending';
+  };
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
         <div className="dashboard-title">
           <h1>Dashboard</h1>
-          <p>Here's what's happening today.</p>
+          <p>Track task health, recent activity, and the work that needs attention.</p>
         </div>
-        <button className="btn-refresh">
+        <button
+          className="btn-refresh"
+          type="button"
+          onClick={() => fetchDashboardData({ isRefresh: true })}
+          disabled={loading || refreshing}
+        >
           <RefreshCw size={16} />
-          Refresh
+          {refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <div className="dashboard-alert">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader className="animate-spin text-gray-400" />
+        <div className="dashboard-loading">
+          <Loader className="dashboard-spinner" />
         </div>
       ) : stats ? (
         <>
-          <div className="stats-grid">
-            <div className="stats-row-top w-full flex gap-6">
-              <div className="stat-card flex-1">
-                <div className="stat-info">
-                  <span className="stat-title">Total Tasks</span>
-                  <span className="stat-value">{stats.totalTasks}</span>
-                </div>
-                <div className="stat-icon icon-purple">
-                  <CheckSquare size={24} />
-                </div>
+          <section className="dashboard-overview">
+            <div className="dashboard-hero">
+              <div className="dashboard-hero-copy">
+                <span className="dashboard-eyebrow">Today&apos;s snapshot</span>
+                <h2>{completionRate}% of tracked work is completed</h2>
+                <p>
+                  {stats.overdueTasks > 0
+                    ? `${stats.overdueTasks} tasks are overdue and need follow-up.`
+                    : 'No overdue tasks right now.'}
+                </p>
               </div>
-
-              <div className="stat-card flex-1">
-                <div className="stat-info">
-                  <span className="stat-title">Completed</span>
-                  <span className="stat-value">{stats.completedTasks}</span>
+              <div className="dashboard-hero-metrics">
+                <div className="hero-metric">
+                  <span className="hero-metric-label">Open work</span>
+                  <strong>{Math.max(stats.totalTasks - stats.completedTasks, 0)}</strong>
                 </div>
-                <div className="stat-icon icon-green">
-                  <CheckCircle2 size={24} />
-                </div>
-              </div>
-
-              <div className="stat-card flex-1">
-                <div className="stat-info">
-                  <span className="stat-title">In Progress</span>
-                  <span className="stat-value">{stats.inProgressTasks}</span>
-                </div>
-                <div className="stat-icon icon-blue">
-                  <Clock size={24} />
-                </div>
-              </div>
-
-              <div className="stat-card flex-1">
-                <div className="stat-info">
-                  <span className="stat-title">Overdue</span>
-                  <span className="stat-value">{stats.overdueTasks}</span>
-                </div>
-                <div className="stat-icon icon-red">
-                  <AlertTriangle size={24} />
+                <div className="hero-metric">
+                  <span className="hero-metric-label">Assigned to you</span>
+                  <strong>{stats.assignedToMe}</strong>
                 </div>
               </div>
             </div>
 
-            <div className="stats-row-bottom w-full flex gap-6">
-              <div className="stat-card" style={{ maxWidth: '30%' }}>
-                <div className="stat-info">
-                  <span className="stat-title">Total Users</span>
-                  <span className="stat-value">{stats.totalUsers}</span>
-                </div>
-                <div className="stat-icon icon-gray">
-                  <Users size={24} />
-                </div>
-              </div>
+            <div className="stats-grid">
+              {statCards.map((card) => {
+                const Icon = card.icon;
 
-              <div className="stat-card" style={{ maxWidth: '30%' }}>
-                <div className="stat-info">
-                  <span className="stat-title">My Tasks</span>
-                  <span className="stat-value">{stats.myTasks}</span>
-                </div>
-                <div className="stat-icon icon-orange">
-                  <Briefcase size={24} />
-                </div>
-              </div>
-
-              <div className="stat-card" style={{ maxWidth: '30%' }}>
-                <div className="stat-info">
-                  <span className="stat-title">Assigned to Me</span>
-                  <span className="stat-value">{stats.assignedToMe}</span>
-                </div>
-                <div className="stat-icon icon-pink">
-                  <Target size={24} />
-                </div>
-              </div>
+                return (
+                  <article key={card.title} className={`stat-card tone-${card.tone}`}>
+                    <div className="stat-card-top">
+                      <div className="stat-info">
+                        <span className="stat-title">{card.title}</span>
+                        <span className="stat-value">{card.value}</span>
+                        <span className="stat-meta">{card.meta}</span>
+                      </div>
+                      <div className={`stat-icon ${card.iconClass}`}>
+                        <Icon size={22} />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-          </div>
+          </section>
 
-          <div className="dashboard-bottom flex gap-6 mt-4">
-            <div className="card-section task-status flex-shrink-0 w-[350px]">
-              <div className="section-header">
-                Task Status
+          <div className="dashboard-bottom">
+            <div className="card-section task-status">
+              <div className="section-header section-header-tight">
+                <div>
+                  <span className="section-kicker">Performance</span>
+                  <h3>Task Status</h3>
+                </div>
+                <span className="chart-summary">{chartData.reduce((sum, item) => sum + item.value, 0)} tasks</span>
               </div>
               <div className="chart-container">
                 <ResponsiveContainer width="100%" height="100%">
@@ -167,18 +227,37 @@ export default function Dashboard() {
                   </RechartsPieChart>
                 </ResponsiveContainer>
               </div>
+              <div className="chart-legend">
+                {chartData.length === 0 ? (
+                  <div className="chart-empty">
+                    <ClipboardList size={18} />
+                    <span>No task data yet</span>
+                  </div>
+                ) : (
+                  chartData.map((item) => (
+                    <div key={item.name} className="chart-legend-item">
+                      <span className="chart-dot" style={{ backgroundColor: item.color }} />
+                      <span>{item.name}</span>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="card-section recent-tasks flex-1">
-              <div className="section-header">
-                Recent Tasks
-                <span className="view-all">
+            <div className="card-section recent-tasks">
+              <div className="section-header section-header-tight">
+                <div>
+                  <span className="section-kicker">Activity</span>
+                  <h3>Recent Tasks</h3>
+                </div>
+                <Link href="/tasks" className="view-all">
                   View all <ArrowRight size={16} />
-                </span>
+                </Link>
               </div>
               <div className="task-list">
                 {recentTasks.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8">No tasks yet</div>
+                  <div className="task-empty-state">No tasks yet</div>
                 ) : (
                   recentTasks.slice(0, 5).map((task) => (
                     <div key={task.id} className="task-item">
@@ -188,7 +267,10 @@ export default function Dashboard() {
                       <div className="task-details">
                         <div className="task-name">{task.name}</div>
                         <div className="task-meta">
-                          <span className={task.status === 'completed' ? 'text-green-600' : task.status === 'in progress' ? 'text-blue-600' : 'text-red-600'}>
+                          <span className={`task-status-badge ${getStatusClass(task.status)}`}>
+                            {task.status}
+                          </span>
+                          <span className={task.status === 'completed' ? 'text-success' : task.status === 'in progress' ? 'text-info' : 'text-danger'}>
                             {task.deadline ? new Date(task.deadline).toLocaleDateString() : 'No deadline'}
                           </span>
                           <span className={`badge-priority badge-${task.priority?.toLowerCase()}`}>{task.priority}</span>

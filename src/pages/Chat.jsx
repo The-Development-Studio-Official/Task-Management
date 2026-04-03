@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Loader, AlertCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Send, Loader, AlertCircle, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import apiCall from '../utils/api.js';
+import { apiCall } from '../utils/api.js';
 
 export default function Chat() {
   const { user, token } = useAuth();
@@ -9,39 +9,38 @@ export default function Chat() {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [users, setUsers] = useState([]);
+  const [members, setMembers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [error, setError] = useState(null);
   const [usersError, setUsersError] = useState(null);
+  const [showUsersOnMobile, setShowUsersOnMobile] = useState(true);
   const messagesEndRef = useRef(null);
 
-  // Fetch all users for the sidebar
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setUsersError(null);
         const data = await apiCall('/chat/users');
         const filteredUsers = Array.isArray(data) ? data.filter((u) => u.id !== user?.id) : [];
-        setUsers(filteredUsers);
+        setMembers(filteredUsers);
         if (filteredUsers.length > 0) {
           setSelectedUser(filteredUsers[0]);
         }
       } catch (err) {
         console.error('Error fetching users:', err);
         setUsersError(err.message || 'Failed to load team members');
-        setUsers([]);
+        setMembers([]);
       }
     };
-    
+
     if (token && user?.id) {
       fetchUsers();
     }
   }, [token, user?.id]);
 
-  // Fetch messages for selected user
   useEffect(() => {
     if (!selectedUser) return;
-    
+
     const fetchMessages = async () => {
       setLoading(true);
       try {
@@ -56,15 +55,12 @@ export default function Chat() {
         setLoading(false);
       }
     };
-    
+
     fetchMessages();
-    
-    // Poll for new messages every 2 seconds
     const interval = setInterval(fetchMessages, 2000);
     return () => clearInterval(interval);
   }, [selectedUser, token]);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -78,14 +74,9 @@ export default function Chat() {
       setError(null);
       await apiCall('/chat/send', {
         method: 'POST',
-        body: JSON.stringify({
-          recipientId: selectedUser.id,
-          message: inputValue
-        })
+        body: JSON.stringify({ recipientId: selectedUser.id, message: inputValue }),
       });
-
       setInputValue('');
-      // Fetch updated messages
       const data = await apiCall(`/chat/messages/${selectedUser.id}`);
       setMessages(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -96,155 +87,149 @@ export default function Chat() {
     }
   };
 
+  const onSelectUser = (selected) => {
+    setSelectedUser(selected);
+    setShowUsersOnMobile(false);
+  };
+
   return (
-    <div className="p-8 h-full">
-      <div className="flex justify-between items-start mb-8">
+    <div className="page-shell">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Organization Chat</h1>
-          <p className="text-gray-500 text-sm">Chat with team members</p>
+          <h1 className="section-title">Organization Chat</h1>
+          <p className="section-subtitle">Direct messaging with team members.</p>
         </div>
+        <button
+          type="button"
+          className="btn btn-secondary md:hidden"
+          onClick={() => setShowUsersOnMobile((prev) => !prev)}
+        >
+          <Users size={16} />
+          {showUsersOnMobile ? 'Hide People' : 'Show People'}
+        </button>
       </div>
 
       {usersError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
-          <AlertCircle size={18} />
-          <span className="text-sm">{usersError}</span>
+        <div className="alert-error mb-4">
+          <AlertCircle size={16} />
+          <span>{usersError}</span>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-[0_8px_32px_rgba(100,110,140,0.05)] h-[calc(100vh-200px)] flex overflow-hidden">
-        
-        {/* Users Sidebar */}
-        <div className="w-64 border-r border-gray-100 flex flex-col">
-          <div className="p-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900 text-sm">Team Members</h3>
-            <p className="text-gray-500 text-xs mt-1">{users.length} members</p>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto">
-            {users.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
-                No team members available
-              </div>
-            ) : (
-              users.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => setSelectedUser(u)}
-                  className={`w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition ${
-                    selectedUser?.id === u.id ? 'bg-indigo-50 border-l-4 border-l-indigo-600' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
-                      selectedUser?.id === u.id ? 'bg-indigo-600' : 'bg-gray-400'
-                    }`}>
-                      {u.username?.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm truncate">{u.username}</p>
-                      <p className="text-gray-500 text-xs capitalize">{u.role}</p>
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {selectedUser ? (
-            <>
-              {/* Header */}
-              <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
-                  {selectedUser.username?.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{selectedUser.username}</p>
-                  <p className="text-gray-500 text-xs capitalize">{selectedUser.role}</p>
-                </div>
-              </div>
-
-              {/* Error Alert */}
-              {error && (
-                <div className="px-4 pt-4">
-                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-3 py-2 rounded-lg flex items-center gap-2 text-sm">
-                    <AlertCircle size={16} />
-                    <span>{error}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {loading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <Loader className="animate-spin text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">Loading messages...</p>
-                    </div>
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    <p>No messages yet. Start the conversation!</p>
-                  </div>
-                ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          msg.senderId === user?.id
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                      >
-                        <p className="text-sm break-words">{msg.message}</p>
-                        <p className={`text-xs mt-1 ${
-                          msg.senderId === user?.id ? 'text-indigo-100' : 'text-gray-500'
-                        }`}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
+      <div className="surface-card h-[calc(100vh-210px)] min-h-[420px] overflow-hidden">
+        <div className="grid h-full md:grid-cols-[260px_1fr]">
+          <aside className={`${showUsersOnMobile ? 'block' : 'hidden'} border-b border-slate-100 md:block md:border-b-0 md:border-r`}>
+            <div className="border-b border-slate-100 p-4">
+              <p className="text-sm font-semibold text-slate-900">Team Members</p>
+              <p className="text-xs text-slate-500">{members.length} available</p>
+            </div>
+            <div className="max-h-[230px] overflow-y-auto md:max-h-none md:h-[calc(100%-64px)]">
+              {members.length === 0 ? (
+                <div className="empty-state">No team members available</div>
+              ) : (
+                members.map((member) => (
+                  <button
+                    key={member.id}
+                    onClick={() => onSelectUser(member)}
+                    className={`w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 ${
+                      selectedUser?.id === member.id ? 'bg-blue-50' : ''
+                    }`}
+                    type="button"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${
+                        selectedUser?.id === member.id ? 'bg-blue-600' : 'bg-slate-400'
+                      }`}>
+                        {member.username?.charAt(0)?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{member.username}</p>
+                        <p className="text-xs capitalize text-slate-500">{member.role}</p>
                       </div>
                     </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-100">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Type a message..."
-                    disabled={sending}
-                    className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 disabled:opacity-50"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputValue.trim() || sending}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {sending ? <Loader size={18} className="animate-spin" /> : <Send size={18} />}
                   </button>
-                </div>
-              </form>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400">
-              <p>Select a user to start chatting</p>
+                ))
+              )}
             </div>
-          )}
+          </aside>
+
+          <section className={`${showUsersOnMobile ? 'hidden md:flex' : 'flex'} h-full flex-col`}>
+            {selectedUser ? (
+              <>
+                <div className="border-b border-slate-100 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
+                      {selectedUser.username?.charAt(0)?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{selectedUser.username}</p>
+                      <p className="text-xs capitalize text-slate-500">{selectedUser.role}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-3">
+                    <div className="alert-error">
+                      <AlertCircle size={16} />
+                      <span>{error}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex-1 overflow-y-auto bg-slate-50/70 p-4">
+                  {loading ? (
+                    <div className="empty-state">
+                      <Loader className="loader-inline mx-auto mb-2 text-slate-400" />
+                      Loading messages...
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="empty-state">No messages yet. Start the conversation.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {messages.map((msg) => (
+                        <div key={msg.id} className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 ${
+                            msg.senderId === user?.id
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-slate-200 bg-white text-slate-900'
+                          }`}>
+                            <p className="text-sm break-words">{msg.message}</p>
+                            <p className={`mt-1 text-[11px] ${msg.senderId === user?.id ? 'text-blue-100' : 'text-slate-500'}`}>
+                              {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </div>
+
+                <form onSubmit={handleSendMessage} className="border-t border-slate-100 p-3 sm:p-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Type a message..."
+                      disabled={sending}
+                      className="control-input"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() || sending}
+                      className="btn btn-primary"
+                    >
+                      {sending ? <Loader size={17} className="loader-inline" /> : <Send size={17} />}
+                    </button>
+                  </div>
+                </form>
+              </>
+            ) : (
+              <div className="empty-state">Select a user to start chatting.</div>
+            )}
+          </section>
         </div>
       </div>
     </div>

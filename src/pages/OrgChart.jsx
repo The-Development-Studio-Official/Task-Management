@@ -2,138 +2,82 @@ import React from 'react';
 import { RefreshCw } from 'lucide-react';
 
 const NodeCard = ({ type, initials, name, subtitle, role }) => {
-  let borderColor = 'border-emerald-500';
-  let bgColor = 'bg-emerald-500';
-  let badgeColor = 'text-emerald-500 border-emerald-200';
+  let accent = 'from-emerald-500 to-teal-500';
+  let ring = 'ring-emerald-100';
+  let badgeTone = 'status-completed';
 
   if (type === 'superadmin') {
-    borderColor = 'border-purple-600';
-    bgColor = 'bg-purple-600';
-    badgeColor = 'text-purple-600 border-purple-200';
+    accent = 'from-fuchsia-600 to-violet-600';
+    ring = 'ring-fuchsia-100';
+    badgeTone = 'status-progress';
   } else if (type === 'admin') {
-    borderColor = 'border-blue-600';
-    bgColor = 'bg-blue-600';
-    badgeColor = 'text-blue-600 border-blue-200';
+    accent = 'from-blue-600 to-cyan-600';
+    ring = 'ring-blue-100';
+    badgeTone = 'status-pending';
   }
 
   return (
-    <div className={`w-48 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col items-center p-4 relative border-t-4 ${borderColor}`}>
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg mb-3 ${bgColor}`}>
+    <div className={`w-48 rounded-xl border border-slate-100 bg-white p-4 text-center shadow-sm ring-4 ${ring}`}>
+      <div className={`mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${accent} text-base font-bold text-white`}>
         {initials}
       </div>
-      <h3 className="font-bold text-gray-900 text-sm">{name}</h3>
-      <p className="text-gray-500 text-[10px] text-center mt-1 leading-tight mb-3">
-        {subtitle}
-      </p>
-      <span className={`px-3 py-0.5 rounded-full text-[10px] font-medium border bg-white ${badgeColor}`}>
-        {role}
-      </span>
+      <h3 className="text-sm font-bold text-slate-900">{name}</h3>
+      <p className="mt-1 mb-3 text-[10px] leading-tight text-slate-500">{subtitle}</p>
+      <span className={`task-status-badge ${badgeTone}`}>{role}</span>
     </div>
   );
 };
 
 export default function OrgChart() {
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-start mb-8">
+    <div className="page-shell">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Organization Chart</h1>
-          <p className="text-gray-500 text-sm">Team hierarchy and reporting structure</p>
+          <h1 className="section-title">Organization Chart</h1>
+          <p className="section-subtitle">Team hierarchy and reporting structure.</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg bg-white text-gray-700 text-sm font-medium hover:bg-gray-50 transition">
-          <RefreshCw size={16} />
-          Refresh
-        </button>
-      </div>
-
-      <div className="flex items-center gap-4 mb-6 text-sm">
-        <div className="flex items-center gap-1.5 text-gray-600">
-          <div className="w-2.5 h-2.5 rounded-full bg-purple-600"></div> Superadmin
-        </div>
-        <div className="flex items-center gap-1.5 text-gray-600">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-600"></div> Admin
-        </div>
-        <div className="flex items-center gap-1.5 text-gray-600">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Member
+        <div className="header-buttons">
+          <button type="button" className="btn btn-secondary">
+            <RefreshCw size={16} />
+            Refresh
+          </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-[0_8px_32px_rgba(100,110,140,0.05)] p-12 overflow-x-auto">
+      <div className="surface-card p-4 sm:p-6 lg:p-8">
+        <div className="mb-5 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+          <span className="task-status-badge status-progress">Superadmin</span>
+          <span className="task-status-badge status-pending">Admin</span>
+          <span className="task-status-badge status-completed">Member</span>
+        </div>
+
         <div className="org-tree">
           <ul>
             <li>
-              <NodeCard 
-                type="superadmin" 
-                initials="SA" 
-                name="Super Admin" 
-                subtitle="Superadmin" 
-                role="Superadmin" 
-              />
+              <NodeCard type="superadmin" initials="SA" name="Super Admin" subtitle="Workspace Owner" role="Superadmin" />
               <ul>
                 <li>
-                  <NodeCard 
-                    type="member" 
-                    initials="S" 
-                    name="somaskandhan" 
-                    subtitle="Founder & Head of Operations" 
-                    role="User" 
-                  />
+                  <NodeCard type="member" initials="S" name="Somaskandhan" subtitle="Founder & Operations" role="User" />
                   <ul>
                     <li>
-                      <NodeCard 
-                        type="admin" 
-                        initials="R" 
-                        name="Raghul" 
-                        subtitle="Co-Founder & Director of Strategy and Growth" 
-                        role="Admin" 
-                      />
+                      <NodeCard type="admin" initials="R" name="Raghul" subtitle="Co-Founder, Strategy & Growth" role="Admin" />
                       <ul>
                         <li>
-                          <NodeCard 
-                            type="member" 
-                            initials="A" 
-                            name="Aaffeef" 
-                            subtitle="Operations Associate" 
-                            role="User" 
-                          />
+                          <NodeCard type="member" initials="A" name="Aaffeef" subtitle="Operations Associate" role="User" />
                         </li>
                         <li>
-                          <NodeCard 
-                            type="member" 
-                            initials="Y" 
-                            name="Yaga" 
-                            subtitle="Sales Associate" 
-                            role="User" 
-                          />
+                          <NodeCard type="member" initials="Y" name="Yaga" subtitle="Sales Associate" role="User" />
                         </li>
                         <li>
-                          <NodeCard 
-                            type="member" 
-                            initials="M" 
-                            name="mahesh" 
-                            subtitle="QA Engineer" 
-                            role="User" 
-                          />
+                          <NodeCard type="member" initials="M" name="Mahesh" subtitle="QA Engineer" role="User" />
                         </li>
                       </ul>
                     </li>
                     <li>
-                      <NodeCard 
-                        type="member" 
-                        initials="P" 
-                        name="Priyanga" 
-                        subtitle="NonStoprev - Co-founder, Growth & Revenue" 
-                        role="User" 
-                      />
+                      <NodeCard type="member" initials="P" name="Priyanga" subtitle="Growth & Revenue" role="User" />
                     </li>
                     <li>
-                      <NodeCard 
-                        type="member" 
-                        initials="A" 
-                        name="Avinash" 
-                        subtitle="NonStoprev - Co-founder, Product & Tech" 
-                        role="User" 
-                      />
+                      <NodeCard type="member" initials="A" name="Avinash" subtitle="Product & Tech" role="User" />
                     </li>
                   </ul>
                 </li>
