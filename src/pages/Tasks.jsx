@@ -3,6 +3,7 @@ import {
   Search, RefreshCw, Plus, Clock, MoreVertical, X, Loader, AlertCircle, Trash2, Edit
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import apiCall from '../utils/api.js';
 
 export default function Tasks() {
   const { token } = useAuth();
@@ -29,19 +30,11 @@ export default function Tasks() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [tasksRes, usersRes] = await Promise.all([
-          fetch('/api/tasks', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/chat/users', { headers: { Authorization: `Bearer ${token}` } })
-        ]);
+        const tasksRes = await apiCall('/tasks');
+        const usersRes = await apiCall('/chat/users');
 
-        if (tasksRes.ok) {
-          const data = await tasksRes.json();
-          setTasks(Array.isArray(data) ? data : []);
-        }
-        if (usersRes.ok) {
-          const data = await usersRes.json();
-          setAllUsers(Array.isArray(data) ? data : []);
-        }
+        setTasks(Array.isArray(tasksRes) ? tasksRes : []);
+        setAllUsers(Array.isArray(usersRes) ? usersRes : []);
       } catch (err) {
         console.error('Error fetching tasks:', err);
         setError(err.message);
@@ -61,18 +54,11 @@ export default function Tasks() {
   const handleCreateTask = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/tasks', {
+      const newTask = await apiCall('/tasks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify(formData)
       });
 
-      if (!res.ok) throw new Error('Failed to create task');
-
-      const newTask = await res.json();
       setTasks([newTask, ...tasks]);
       setFormData({ name: '', description: '', priority: 'medium', status: 'pending', assignedToId: null, deadline: '' });
       setIsModalOpen(false);
@@ -84,18 +70,11 @@ export default function Tasks() {
   const handleUpdateTask = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch(`/api/tasks/${editingTask.id}`, {
+      const updatedTask = await apiCall(`/tasks/${editingTask.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify(formData)
       });
 
-      if (!res.ok) throw new Error('Failed to update task');
-
-      const updatedTask = await res.json();
       setTasks(tasks.map(t => t.id === editingTask.id ? updatedTask : t));
       setEditingTask(null);
       setFormData({ name: '', description: '', priority: 'medium', status: 'pending', assignedToId: null, deadline: '' });
@@ -108,13 +87,10 @@ export default function Tasks() {
   const handleDeleteTask = async (id) => {
     if (!window.confirm('Delete this task?')) return;
     try {
-      const res = await fetch(`/api/tasks/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+      await apiCall(`/tasks/${id}`, {
+        method: 'DELETE'
       });
-      if (res.ok) {
-        setTasks(tasks.filter(t => t.id !== id));
-      }
+      setTasks(tasks.filter(t => t.id !== id));
     } catch (err) {
       setError(err.message);
     }

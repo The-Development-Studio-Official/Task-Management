@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import apiCall from '../utils/api.js';
 
 export default function Dashboard() {
   const { token } = useAuth();
@@ -19,15 +20,8 @@ export default function Dashboard() {
         setLoading(true);
         setError(null);
         
-        const [statsRes, tasksRes] = await Promise.all([
-          fetch('/api/dashboard/stats', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/dashboard/recent-tasks', { headers: { Authorization: `Bearer ${token}` } })
-        ]);
-
-        if (!statsRes.ok || !tasksRes.ok) throw new Error('Failed to fetch data');
-
-        const statsData = await statsRes.json();
-        const tasksData = await tasksRes.json();
+        const statsData = await apiCall('/dashboard/stats');
+        const tasksData = await apiCall('/dashboard/recent-tasks');
 
         setStats(statsData);
         setRecentTasks(Array.isArray(tasksData) ? tasksData : []);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity as ActivityIcon, Edit2, Plus, Shield, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import apiCall from '../utils/api.js';
 
 export default function ActivityLog() {
   const { token } = useAuth();
@@ -12,14 +13,8 @@ export default function ActivityLog() {
     const fetchActivities = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/activity-logs', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setActivities(Array.isArray(data) ? data : []);
-        }
+        const data = await apiCall('/activity-logs');
+        setActivities(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching activities:', err);
         setError(err.message);

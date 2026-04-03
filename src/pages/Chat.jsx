@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import apiCall from '../utils/api.js';
 
 export default function Chat() {
   const { user, token } = useAuth();
@@ -19,13 +20,7 @@ export default function Chat() {
     const fetchUsers = async () => {
       try {
         setUsersError(null);
-        const res = await fetch('/api/chat/users', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch users: ${res.status}`);
-        }
-        const data = await res.json();
+        const data = await apiCall('/chat/users');
         const filteredUsers = Array.isArray(data) ? data.filter((u) => u.id !== user?.id) : [];
         setUsers(filteredUsers);
         if (filteredUsers.length > 0) {
@@ -51,13 +46,7 @@ export default function Chat() {
       setLoading(true);
       try {
         setError(null);
-        const res = await fetch(`/api/chat/messages/${selectedUser.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch messages: ${res.status}`);
-        }
-        const data = await res.json();
+        const data = await apiCall(`/chat/messages/${selectedUser.id}`);
         setMessages(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching messages:', err);
@@ -87,32 +76,18 @@ export default function Chat() {
     setSending(true);
     try {
       setError(null);
-      const res = await fetch('/api/chat/send', {
+      await apiCall('/chat/send', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({
           recipientId: selectedUser.id,
           message: inputValue
         })
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || `Failed to send message: ${res.status}`);
-      }
-
       setInputValue('');
       // Fetch updated messages
-      const messagesRes = await fetch(`/api/chat/messages/${selectedUser.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (messagesRes.ok) {
-        const data = await messagesRes.json();
-        setMessages(Array.isArray(data) ? data : []);
-      }
+      const data = await apiCall(`/chat/messages/${selectedUser.id}`);
+      setMessages(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error sending message:', err);
       setError(err.message || 'Failed to send message');

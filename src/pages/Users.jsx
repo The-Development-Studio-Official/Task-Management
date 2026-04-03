@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Trash2, Edit2, Plus, Shield } from 'lucide-react';
+import apiCall from '../utils/api.js';
 
 export default function Users() {
   const { token, user } = useAuth();
@@ -28,15 +29,9 @@ export default function Users() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/users', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        setUsers(await response.json());
-        setError('');
-      } else {
-        setError('Failed to fetch users');
-      }
+      const usersData = await apiCall('/users');
+      setUsers(usersData);
+      setError('');
     } catch (err) {
       setError('Error loading users: ' + err.message);
     } finally {
@@ -89,12 +84,8 @@ export default function Users() {
     }
 
     try {
-      const response = await fetch('/api/users', {
+      const newUser = await apiCall('/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
@@ -104,15 +95,9 @@ export default function Users() {
         })
       });
 
-      if (response.ok) {
-        const newUser = await response.json();
-        setUsers([newUser, ...users]);
-        setError('');
-        handleCloseModal();
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to create user');
-      }
+      setUsers([newUser, ...users]);
+      setError('');
+      handleCloseModal();
     } catch (err) {
       setError('Error creating user: ' + err.message);
     }
@@ -126,12 +111,8 @@ export default function Users() {
     }
 
     try {
-      const response = await fetch(`/api/users/${editingUser.id}`, {
+      const updatedUser = await apiCall(`/users/${editingUser.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
@@ -140,15 +121,9 @@ export default function Users() {
         })
       });
 
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
-        setError('');
-        handleCloseModal();
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to update user');
-      }
+      setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+      setError('');
+      handleCloseModal();
     } catch (err) {
       setError('Error updating user: ' + err.message);
     }
@@ -165,18 +140,12 @@ export default function Users() {
     }
 
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+      await apiCall(`/users/${userId}`, {
+        method: 'DELETE'
       });
 
-      if (response.ok) {
-        setUsers(users.filter(u => u.id !== userId));
-        setError('');
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to delete user');
-      }
+      setUsers(users.filter(u => u.id !== userId));
+      setError('');
     } catch (err) {
       setError('Error deleting user: ' + err.message);
     }

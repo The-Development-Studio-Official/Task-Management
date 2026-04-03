@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import apiCall from '../utils/api.js';
 
 const AuthContext = createContext(null);
 
@@ -11,17 +12,14 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       localStorage.setItem('token', token);
       // Validate token
-      fetch('/api/auth/me', {
+      apiCall('/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => {
-        if (!res.ok) throw new Error('Invalid token');
-        return res.json();
       })
       .then(userData => {
         setUser(userData);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Token validation error:', err);
         setToken(null);
         setUser(null);
         localStorage.removeItem('token');
@@ -41,6 +39,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setToken(null);
     setUser(null);
+    localStorage.removeItem('token');
   };
 
   return (
